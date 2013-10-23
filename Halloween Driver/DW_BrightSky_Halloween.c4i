@@ -1,0 +1,174 @@
+<devicedata>
+    <copyright>Copyright 2012 BrightSky - All rights reserved.</copyright>
+    <name>Halloween 2012</name>
+    <small>devices_sm/c4.gif</small>
+    <large>devices_lg/c4.gif</large>
+    <control>lua_gen</control>
+    <driver>DriverWorks</driver>
+    <proxy>DW_BrightSky_Halloween</proxy>
+    <composer_categories>
+        <category>other</category>
+    </composer_categories>
+    <manufacturer>BrightSky</manufacturer>
+    <creator>Seth_J</creator>
+    <created>10/29/2012 11:45 AM</created>
+    <modified>10/31/2012 10:00 PM</modified>
+    <version>100</version>
+    <model>Halloween 2012</model>
+    <front/>
+    <back/>
+    <top/>
+    <bottom/>
+    <left/>
+    <right/>
+    <config>
+
+        <script>
+<![CDATA[
+
+
+function InitTimers() 
+timerTree[1] = C4:AddTimer(math.random(Properties['Creepiness']), "SECONDS", false)
+timerTree[3] = C4:AddTimer((math.random(Properties['Creepiness']) * 2) + math.random(10), "MINUTES", false) -- long
+timerTree[4] = C4:AddTimer(math.random(Properties['Creepiness'] * 4), "SECONDS", false) -- medium
+timerTree[5] = C4:AddTimer(math.random(Properties['Creepiness'] * 100), "MILLISECONDS", false) -- short
+end
+
+
+gHalloween = true
+
+timerTree = {}
+C4:AddVariable("IS_HALLOWEEN", "1", "BOOL")
+C4:AddVariable("SCARY_LIGHT", "0", "NUMBER")
+C4:AddVariable("LONG_RANDOM", "0", "BOOL")
+C4:AddVariable("MEDIUM_RANDOM", "0", "BOOL")
+C4:AddVariable("CRAZY_RANDOM", "0", "BOOL")
+
+-- Setup Main Timer for lighting
+
+currentLevel = 100
+oldLevel = 0
+
+-- Setup random other variables and timers
+-- These will start at ID 3
+
+
+function OnPropertyChanged(strProperty)
+	if (strProperty == "Creepiness") then
+	C4:KillTimer(timerTree[1])
+	local creepySetting = (10 - Properties["Creepiness"]) + 1
+	timerTree[1] = C4:AddTimer(math.random(creepySetting), "SECONDS", false)
+	print("Creepiness changed to " .. Properties['Creepiness'] .. ". Very Scary!")
+	end
+
+end
+
+
+function OnTimerExpired(idTimer)
+	for k,v in pairs(timerTree) do
+		if idTimer == v then
+			if (k == 1) then 
+				
+				oldLevel = currentLevel + math.random(50)
+				if(oldLevel > 100) then oldLevel = 100 end
+				currentLevel = math.random(100)
+				C4:SetVariable("SCARY_LIGHT", tostring(currentLevel))
+				timerTree[2] = C4:AddTimer(math.random(500), "MILLISECONDS", false)
+				local creepySetting = (10 - Properties["Creepiness"]) + 1
+				timerTree[1] = C4:AddTimer(math.random(creepySetting), "SECONDS", false)
+				
+			end
+			if (k == 2) then 
+				C4:SetVariable("SCARY_LIGHT", tostring(oldLevel))
+			end
+			if (k == 3) then
+				--Long Interval
+				timerTree[3] = C4:AddTimer(math.random(Properties['Creepiness']) + math.random(10), "MINUTES", false) -- long
+				if Variables['LONG_RANDOM'] then 
+					C4:SetVariable("LONG_RANDOM", "0", "BOOL")
+					--print("Long Random => False")					
+				else 
+					C4:SetVariable("LONG_RANDOM", "1", "BOOL") 
+					--print("Long Random => True")	
+				end
+				
+			end
+			if (k == 4) then
+				--Long Interval
+				timerTree[4] = C4:AddTimer(math.random(Properties['Creepiness'] * math.random(4)), "SECONDS", false) -- medium
+				if Variables['MEDIUM_RANDOM'] then 
+					C4:SetVariable("MEDIUM_RANDOM", "0", "BOOL") 
+					--print("Medium Random => False")
+				else 
+					C4:SetVariable("MEDIUM_RANDOM", "1", "BOOL")
+					--print("Medium Random => True")					
+				end
+			end
+			if (k == 5) then
+				--Long Interval
+				timerTree[5] = C4:AddTimer(math.random(Properties['Creepiness'] * math.random(100)), "MILLISECONDS", false) -- short
+				if (Variables['CRAZY_RANDOM'] == "1") then 
+					C4:SetVariable("CRAZY_RANDOM", "0", "BOOL")
+					--print("Crazy Random => False")
+				else 
+					C4:SetVariable("CRAZY_RANDOM", "1", "BOOL")
+					--print("Crazy Random => True")
+
+				end
+			end			
+			
+		end
+	end
+	
+end
+
+function OnVariableChanged(strName)
+print(strName, Variables[strName])
+	if (strName == "IS_HALLOWEEN") then
+		gHalloween = Variables["IS_HALLOWEEN"]
+		if (gHalloween == false) then
+			OnDriverDestroyed()
+		else
+			InitTimers()
+		end
+	end
+end
+
+function OnDriverDestroyed()
+--Delete
+	for k,v in pairs(timerTree) do
+		C4:KillTimer(v)
+	end
+
+end
+
+
+InitTimers()
+
+]]>
+</script>
+        <documentation>      
+Happy Halloween!
+
+Adjust the creepy setting at your own risk!
+
+BrightSky 2012
+www.brightskyhome.com
+		</documentation>
+        <properties>
+			<property>
+                <name>Creepiness</name>
+                <type>RANGED_INTEGER</type>
+				<minimum>1</minimum>
+                <maximum>10</maximum>
+                <default>5</default>
+                <readonly>false</readonly>
+            </property>
+        </properties>
+        <actions />
+        <commands />
+    </config>
+    <states/>
+    <connections />
+	<capabilities />
+</devicedata>
