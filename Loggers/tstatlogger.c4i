@@ -1,0 +1,397 @@
+<devicedata>
+  <creator>Seth_J</creator>
+  <name>Thermostat Logger</name>
+  <model>Logger (TSTAT)</model>
+  <manufacturer>BrightSky</manufacturer>
+  <driver>DriverWorks</driver>
+  <control>lua_gen</control>
+  <combo>true</combo>
+  <config>
+    <script>
+      <![CDATA[
+ 
+
+-----------  Driver Functions  -----------
+
+function startLog()
+ -- local lengthInMinutes
+  if (gDayTimer) then gDayTimer = 0; end
+  gDayTimer = C4:AddTimer(7200, "MINUTES", false ); --5 days worth of logging
+
+  local bexist = C4:FileExists("tempData.csv");
+  if (bexist) then
+        -- the file is already present on the file system
+        C4:FileDelete("tempData.csv");
+  end
+
+  local fh = C4:FileOpen("tempData.csv");
+  if (fh == -1) then
+    print("Error: Creating File Failed");
+    return;
+  end
+
+  local strData = "";
+
+  strData = strData .. "TIMESTAMP" .. ",";
+  strData = strData .. "SCALE" .. ","; 
+  strData = strData .. "TEMPERATURE" .. ",";
+  strData = strData .. "HEAT_SETPOINT" .. ",";
+  strData = strData .. "COOL_SETPOINT" .. ",";
+  strData = strData .. "HVAC_MODE" .. ",";
+  strData = strData .. "FAN_MODE" .. ",";
+  strData = strData .. "HOLD_MODE" .. ",";
+  strData = strData .. "HVAC_STATE" .. ",";
+  strData = strData .. "FAN_STATE" .. ",";
+  strData = strData .. "VACATION_MODE" .. ",";
+  strData = strData .. "VACATION_HEAT_SETPOINT" .. ",";
+  strData = strData .. "VACATION_COOL_SETPOINT" .. ",";
+  strData = strData .. "IS_CONNECTED" .. ",";
+  strData = strData .. "DISPLAY_TEMPERATURE" .. ",";
+  strData = strData .. "DISPLAY_HEATSETPOINT" .. ",";
+  strData = strData .. "DISPLAY_COOLSETPOINT" .. ",";
+  strData = strData .. "CALIBRATION" .. "\n\r";
+  local numWritten = C4:FileWriteString(fh, strData);
+
+  C4:FileClose(fh);
+
+
+  local statData = getDeviceData();
+
+  local fileSuccess = saveToFile(statData);
+  if (fileSuccess == 0) then
+    print("Error saving data to file.");
+  end
+  updateProperties(statData);
+  if (gLogTimer) then gLogTimer = 0; end
+  gLogTimer = C4:AddTimer(tonumber(Properties["Duration (minutes)"]),"MINUTES",true);
+end
+
+function resumeLog()
+  gLogTimer = C4:AddTimer(tonumber(Properties["Duration (minutes)"]),"MINUTES",true);
+end
+
+function endLog()
+  if (gLogTimer) then
+    C4:KillTimer(gLogTimer);
+    gLogTimer = 0;
+    local fileHandles = C4:FileGetOpenedHandles();
+        if (fileHandles) then
+            for index,value in pairs(fileHandles) do
+              C4:FileClose(index);
+            end 
+        end
+      else
+        print("Already done. XOXO");
+        return;
+    end
+end
+
+function getDeviceData()
+  local tDeviceDataTable = {};
+  
+  for k,v in pairs(tVariableTable) do
+    local title = k;
+    local data =  C4:GetDeviceVariable(gDeviceId, v);
+    tDeviceDataTable[title] = data;
+    --print(data);
+  end
+  return tDeviceDataTable;
+end
+
+function saveToFile(tData)
+  local fh = C4:FileOpen("tempData.csv")
+  if (fh == -1) then
+    --print("Error: Bad File or Creating File Failed");
+    return 0;
+  end
+
+  local strData = "";
+  local timeDate = os.date("%x %X");
+  --local timeStamp = os.date("%X");
+
+  strData = strData .. timeDate .. ",";
+  --strData = strData .. timeStamp .. ","; 
+  strData = strData .. tData.SCALE .. ","; 
+  strData = strData .. tData.TEMPERATURE .. ",";
+  strData = strData .. tData.HEAT_SETPOINT .. ",";
+  strData = strData .. tData.COOL_SETPOINT .. ",";
+  strData = strData .. tData.HVAC_MODE .. ",";
+  strData = strData .. tData.FAN_MODE .. ",";
+  strData = strData .. tData.HOLD_MODE .. ",";
+  strData = strData .. tData.HVAC_STATE .. ",";
+  strData = strData .. tData.FAN_STATE .. ",";
+  strData = strData .. tData.VACATION_MODE .. ",";
+  strData = strData .. tData.VACATION_HEAT_SETPOINT .. ",";
+  strData = strData .. tData.VACATION_COOL_SETPOINT .. ",";
+  strData = strData .. tData.IS_CONNECTED .. ",";
+  strData = strData .. tData.DISPLAY_TEMPERATURE .. ",";
+  strData = strData .. tData.DISPLAY_HEATSETPOINT .. ",";
+  strData = strData .. tData.DISPLAY_COOLSETPOINT .. ",";
+  strData = strData .. tData.CALIBRATION .. "\r\n";
+
+
+  print(strData);
+
+  local numWritten = C4:FileWriteString(fh, strData);
+  --print(numWritten .. " bytes written to log file.");
+  C4:FileClose(fh);
+  return 1;
+end
+
+function updateProperties( tData )
+  C4:UpdateProperty("Temp.", tostring(tData.DISPLAY_TEMPERATURE));
+  C4:UpdateProperty("Heat Set", tostring(tData.DISPLAY_HEATSETPOINT));
+  C4:UpdateProperty("Cool Set", tostring(tData.DISPLAY_COOLSETPOINT));
+  C4:UpdateProperty("Scale", tostring(tData.SCALE));
+  C4:UpdateProperty("Mode", tostring(tData.HVAC_MODE));
+end
+
+----------- Director Functions -----------
+
+function OnPropertyChanged( strName )
+  if (strName == "Thermostat ID") then
+    print("Device ID Changed.");
+    gDeviceId = tonumber(Properties['Thermostat ID']);
+  end
+  if (strName == "Enable Logging") then
+    if (Properties[strName] == "Yes") then
+      startLog();
+    end
+    if (Properties[strName] == "No") then
+      endLog();
+    end 
+  end
+  if (strName == "Duration (minutes)") then
+    C4:KillTimer(gLogTimer);
+    local interval = tonumber(Properties[strName]);
+    print("Chaning to " .. interval .." minutes.");
+    gLogTimer = C4:AddTimer( interval, "MINUTES", true );
+  end
+
+end
+
+function OnTimerExpired(idTimer)
+  --print(idTimer .. " expired.");
+  if (idTimer == gLogTimer) then
+    local statData = getDeviceData();
+    local fileSuccess = saveToFile(statData);
+    if (fileSuccess == 0) then
+      print("Error saving data to file.");
+    end
+    updateProperties(statData);
+  end
+  if (idTimer == gDayTimer) then
+    C4:UpdateProperty("Enable Logging","No");
+    endLog(); -- just in case
+  end
+end
+
+function OnDriverDestroyed()
+  C4:KillTimer(gDayTimer);
+  C4:KillTimer(gLogTimer);
+  gDayTimer = 0;
+  gLogTimer = 0;
+
+end
+
+
+-----------        Init        -----------
+
+
+tVariableTable = {}
+tVariableTable["SCALE"] = 1100;
+tVariableTable["TEMPERATURE"] = 1101;
+tVariableTable["HEAT_SETPOINT"] = 1102;
+tVariableTable["COOL_SETPOINT"] = 1103;
+tVariableTable["HVAC_MODE"] = 1104;
+tVariableTable["FAN_MODE"] = 1105;
+tVariableTable["HOLD_MODE"] = 1106;
+tVariableTable["HVAC_STATE"] = 1107;
+tVariableTable["FAN_STATE"] = 1108;
+tVariableTable["VACATION_MODE"] = 1109;
+tVariableTable["VACATION_HEAT_SETPOINT"] = 1110;
+tVariableTable["VACATION_COOL_SETPOINT"] = 1111;
+tVariableTable["IS_CONNECTED"] = 1112;
+
+tVariableTable["DISPLAY_TEMPERATURE"] = 1117;
+tVariableTable["DISPLAY_HEATSETPOINT"] = 1118;
+tVariableTable["DISPLAY_COOLSETPOINT"] = 1119;
+
+tVariableTable["CALIBRATION"] = 1129;
+
+gDayTimer = 0;
+gLogTimer = 0;
+gDeviceTable = {};
+gDeviceId = 0;
+
+if (Properties["Enable Logging"] == "Yes") then
+  -- must have been a reboot?
+  resumeLog();
+end
+
+--[[
+
+1000 -- V1 HVACMODE -- OFF
+1001 -- V1 FANMODE -- AUTO
+1003 -- V1 TEMPERATURE -- 120
+1004 -- V1 HEAT_SETPOINT -- 88
+1005 -- V1 COOL_SETPOINT -- 90
+1006 -- V1 HOLDMODE -- OFF
+1007 -- V1 SCHED_CHANGED -- False
+1008 -- V1 OUTDOOR_TEMPERATURE -- 0
+1009 -- V1 HEATPUMP -- False
+1010 -- V1 HVACMODES -- Off,Heat,Cool,Auto,Emergency Heat
+1011 -- V1 FANMODES -- Auto,On
+1012 -- V1 SCALE -- FAHRENHEIT
+1013 -- V1 FANSTATE -- 0
+1014 -- V1 PRI_HEAT_STATE -- 0
+1015 -- V1 SEC_HEAT_STATE -- 0
+1016 -- V1 AUX_HEAT_STATE -- 0
+1017 -- V1 PRI_COOL_STATE -- 0
+1018 -- V1 SEC_COOL_STATE -- 0
+1019 -- V1 EMERGENCY_HEAT_STATE -- 0
+1100 -- SCALE -- FAHRENHEIT
+1101 -- TEMPERATURE -- 488
+1102 -- HEAT_SETPOINT -- 310
+1103 -- COOL_SETPOINT -- 321
+1104 -- HVAC_MODE -- Off
+1105 -- FAN_MODE -- Auto
+1106 -- HOLD_MODE -- Off
+1107 -- HVAC_STATE -- Off
+1108 -- FAN_STATE -- Off
+1109 -- VACATION_MODE -- False
+1110 -- VACATION_HEAT_SETPOINT -- 0
+1111 -- VACATION_COOL_SETPOINT -- 0
+1112 -- IS_CONNECTED -- False
+1113 -- SCHEDULE -- nil
+1114 -- IN_DR_EVENT -- False
+1115 -- CUR_DR_SETPOINT -- 0
+1116 -- CUR_DR_ENDTIME -- -1
+1117 -- DISPLAY_TEMPERATURE -- 120
+1118 -- DISPLAY_HEATSETPOINT -- 88
+1119 -- DISPLAY_COOLSETPOINT -- 90
+1120 -- HVAC_MODES_LIST -- Off,Heat,Cool,Auto,Emergency Heat
+1121 -- FAN_MODES_LIST -- Auto,On
+1122 -- HOLD_MODES_LIST -- Off,2 Hours,Until Next,Permanent
+1123 -- DR_EVENT_IS_MANDATORY -- False
+1124 -- HEATPUMP -- False
+1125 -- PRIMARY_HEAT_SOURCE -- Not Used
+1126 -- AUXILIARY_HEAT_SOURCE -- Not Used
+1127 -- EMERGENCY_HEAT_SOURCE -- Not Used
+1128 -- REVERSING_VALVE -- Not Used
+1129 -- CALIBRATION -- 0
+1200 -- ANA_PRIMARYHEAT -- False
+1201 -- ANA_PRIMARYCOOL -- False
+1202 -- ANA_SECONDARYHEAT -- False
+1203 -- ANA_SECONDARYCOOL -- False
+1204 -- ANA_FAN -- False
+1205 -- ANA_ISCONNECTED -- False
+1206 -- ANA_INDOORTEMP -- 488
+1207 -- ANA_HEATSETPOINT -- 310
+1208 -- ANA_COOLSETPOINT -- 321
+1209 -- ANA_VACATIONMODE -- False
+1210 -- ANA_VACHEATSETPOINT -- 0
+1211 -- ANA_VACCOOLSETPOINT -- 0
+1212 -- ANA_HVACMODE -- Off
+1213 -- ANA_FANMODE -- Auto
+1214 -- ANA_HOLDMODE -- Off
+1215 -- ANA_HVACSTATE -- Off
+1216 -- ANA_FANSTATE -- Off
+
+]]
+ 
+]]>
+    </script>
+    <documentation />
+    <properties>
+      <property>      
+        <name>Thermostat ID</name>
+        <type>DEVICE_SELECTOR</type>
+        <items>
+          <item>control4_thermostat.c4i</item>
+        </items>
+        <multiselect>false</multiselect>
+      </property>
+
+      <property>
+            <name>Enable Logging</name>
+            <type>LIST</type>
+            <items>
+                <item>Yes</item>
+                <item>No</item>
+            </items>
+            <default>No</default>
+            <readonly>false</readonly>
+      </property>
+
+      <property>
+            <name>Duration (minutes)</name>
+            <type>LIST</type>
+            <items>
+                <item>1</item>
+                <item>5</item>
+                <item>15</item>
+                <item>30</item>
+                <item>60</item>
+                <item>180</item>
+            </items>
+            <default>5</default>
+            <readonly>false</readonly>
+      </property>      
+
+
+      <property>
+        <name>Temp.</name>
+        <type>STRING</type>
+        <default></default>
+        <readonly>true</readonly>
+      </property>
+
+      <property>
+        <name>Heat Set</name>
+        <type>STRING</type>
+        <default></default>
+        <readonly>true</readonly>
+      </property>
+
+      <property>
+        <name>Cool Set</name>
+        <type>STRING</type>
+        <default></default>
+        <readonly>true</readonly>
+      </property>
+
+      <property>
+        <name>Scale</name>
+        <type>STRING</type>
+        <default></default>
+        <readonly>true</readonly>
+      </property>
+
+      <property>
+        <name>Mode</name>
+        <type>STRING</type>
+        <default></default>
+        <readonly>true</readonly>
+      </property>
+
+
+    </properties>
+    <actions />
+    <commands />
+    <events />
+  </config>
+  <proxy>tstatlogger</proxy>
+  <version>2</version>
+  <small>devices_sm/C4.gif</small>
+  <large>devices_lg/C4.gif</large>
+  <front/>
+  <back/>
+  <top/>
+  <bottom/>
+  <left/>
+  <right/>
+  <composer_categories />
+  <capabilities />
+  <connections />
+</devicedata>
