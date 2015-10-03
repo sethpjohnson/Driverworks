@@ -22,11 +22,11 @@
 
 function processMessage ( strData , nHandle)
 
-	local _,_, g = string.find(strData, "GET /(%w*) ")
+	local _,_, g = string.find(strData, "GET /(%d*) ")
 	
 	fireEvent(g)
 	--close socket nHandle
-	C4:ServerSend(nHandle, "OK")
+	C4:ServerSend(nHandle, "{status: \"OK\", event: " .. g .. " }")
 	C4:ServerCloseClient(nHandle)
 end
 

@@ -1,0 +1,66 @@
+<devicedata>
+  <copyright>Copyright 2011 BrightSky.  All rights reserved.</copyright>
+  <name>Mobotix M12</name>
+  <small>devices_sm/HVAC_16.gif</small>
+  <large>devices_lg/HVAC_32.gif</large>
+  <control>camera_ip_http</control>
+  <proxy>camera_ip_http_Mobotix_M12</proxy>
+  <driver>HTTP_IP_CAMERA</driver>
+  <composer_categories>
+	<category>NONE</category>
+  </composer_categories>
+  <states />
+  <connections />
+  <config>
+    <commands>
+
+      <command>
+        <name>GET_IMAGE</name>
+        <URL>/cgi-bin/image.jpg?size=[Resolution]</URL>
+        <params>
+          <param>
+            <name>Resolution</name>
+            <values>
+              <value>320x240</value>
+              <value>640x480</value>
+            </values>
+            <default>320x240</default>
+          </param>
+        </params>
+      </command>
+
+      <command>
+        <name>GET_MJPEG</name>
+        <URL>/control/faststream.jpg?stream=full&amp;needlength&amp;noaudio</URL>
+        <params />
+      </command>
+    </commands>
+  </config>
+  <manufacturer>Mobotix</manufacturer>
+  <version />
+  <creator>Seth_J</creator>
+  <created>08/29/2011 12:30 PM</created>
+  <modified>08/29/2011 12:30 PM</modified>
+  <model>Mobotix M12</model>
+  <front />
+  <back />
+  <top />
+  <bottom />
+  <left />
+  <right />
+  <capabilities>
+  <is_camera>True</is_camera>
+  <can_pan>False</can_pan>
+  <can_pan_scan>False</can_pan_scan>
+  <can_tilt>False</can_tilt>
+  <can_tilt_scan>False</can_tilt_scan>
+  <can_home>False</can_home>
+  <can_zoom>False</can_zoom>
+  <can_focus>False</can_focus>
+  <can_brightness>False</can_brightness>
+  <can_click_position>True</can_click_position>
+  <num_image_list>5</num_image_list>
+  <update_seconds_not>5</update_seconds_not>
+  <update_milliseconds>500</update_milliseconds>
+  </capabilities>
+</devicedata>
